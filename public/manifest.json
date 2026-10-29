@@ -1,0 +1,18 @@
+{
+    "name": "فَقَدتُ ووَجَدتُ",
+    "short_name": "فقدت ووجدت",
+    "description": "منصة طوارئ مجتمعية لإدارة المفقودات والأمانات - غزة",
+    "start_url": "/Tajed-Tafqed/public/index.php",
+    "display": "standalone",
+    "background_color": "#f0fdfa",
+    "theme_color": "#0d9488",
+    "lang": "ar",
+    "dir": "rtl",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

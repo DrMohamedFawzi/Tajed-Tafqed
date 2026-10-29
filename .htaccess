@@ -1,0 +1,48 @@
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Tajed-Tafqed/
+    
+    # Redirect empty path to public/index.php
+    RewriteRule ^$ public/index.php [R=302,L]
+
+    # Block access to core/ directory
+    RewriteRule ^core/ - [F,L]
+    
+    # Block access to storage/ directory
+    RewriteRule ^storage/ - [F,L]
+    
+    # Block access to .sqlite files
+    RewriteRule \.sqlite$ - [F,L]
+    
+    # Block access to .env files
+    RewriteRule \.env$ - [F,L]
+</IfModule>
+
+# Deny access to sensitive file types
+<FilesMatch "\.(sqlite|sqlite3|db|sql|env|log|ini|bak)$">
+    Require all denied
+</FilesMatch>
+
+# Enable Gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json text/xml application/xml
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
