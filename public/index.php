@@ -71,13 +71,15 @@ function formatEventDate(?string $date): string {
 $filterQs = '&filter_category=' . urlencode((string)$filterCategory) . '&filter_area=' . urlencode((string)$filterArea);
 $pageQs = '&filter_type=' . urlencode((string)$filterType) . $filterQs;
 
-pageStart('منصة المفقودات والأمانات في غزة', 'home');
+pageStart('منصة المفقودات والأمانات في غزة', 'home',
+    '<link rel="preload" as="image" href="assets/img/hero-wide-v1.webp" media="(min-width: 761px)">'
+    . '<link rel="preload" as="image" href="assets/img/hero-phone-v1.webp" media="(max-width: 760px)">');
 ?>
 
 <!-- Splash Screen ("غزة لسا فيها خير") - shown once per session -->
 <div id="splashScreen" class="splash-overlay">
     <div class="splash-logo-wrap">
-        <img src="assets/logo.svg" alt="" style="width: 100%; height: 100%;">
+        <img src="assets/mark.svg" alt="" style="width: 100%; height: 100%;">
     </div>
     <div class="splash-title">فَقَدتُ ووَجَدتُ</div>
     <div class="splash-motto">
@@ -94,68 +96,112 @@ pageStart('منصة المفقودات والأمانات في غزة', 'home');
 try { if (sessionStorage.getItem('lfSplashSeen')) { var s = document.getElementById('splashScreen'); s.parentNode.removeChild(s); } } catch (e) {}
 </script>
 
-<!-- Hero: the two main choices -->
-<header class="hero-header">
-    <div class="container">
-        <div class="hero-badge">
-            <?= icon('heart') ?>
-            <span>تمت إعادة <strong><?= (int)$successCount ?></strong> أمانة لأصحابها بحمد الله</span>
-        </div>
-        <h1 class="hero-title">منصة "فَقَدتُ ووَجَدتُ" في قطاع غزة</h1>
-        <p class="hero-lead">
-            نساعد أهل غزة على إعادة الوثائق والأغراض المفقودة لأصحابها. المنصة مجانية وخفيفة، وتعمل حتى مع ضعف الإنترنت.
-        </p>
+<!-- Hero: search first, then the two main choices; photo with a tag-shaped edge -->
+<header class="hero">
+    <div class="hero-text" id="searchSection">
+        <span class="hero-pill"><?= tagGlyph() ?> منصة مجتمعية مجانية لأهل قطاع غزة</span>
+        <h1 class="hero-title">فقدتَ شيئاً؟<br><span class="hero-title-2">غزة لسا فيها خير</span></h1>
+        <p class="hero-lead">ابحث برقم الهوية أو الاسم، أو سجّل ما فقدته أو وجدته. المنصة تصل بينكما، وتعمل حتى مع ضعف الإنترنت.</p>
 
-        <div class="choice-grid">
-            <a href="report.php?type=lost" class="choice-card">
-                <span class="choice-icon"><?= icon('search', 'ic-lg') ?></span>
-                <span>
-                    <span class="choice-title">فقدتُ شيئاً</span>
-                    <span class="choice-desc">سجّل ما فقدته ليراه من يجده</span>
-                </span>
+        <form id="searchForm" class="hero-search" onsubmit="return handleSearchSubmit(event)" role="search">
+            <label for="mainSearchInput" class="sr-only">ابحث</label>
+            <input
+                type="search"
+                id="mainSearchInput"
+                class="search-input"
+                placeholder="رقم الهوية، الاسم، أو رمز الأمانة"
+                autocomplete="off"
+                required
+                minlength="2"
+                dir="rtl"
+                aria-describedby="searchHint"
+            >
+            <button type="submit" class="btn-search" id="mainSearchBtn">
+                <?= icon('search') ?><span class="lbl">ابحث</span>
+            </button>
+        </form>
+        <div class="search-modes" id="searchHint">
+            <span>ابحث بـ:</span>
+            <span>رقم الهوية</span>
+            <span>الجواز</span>
+            <span>IMEI</span>
+            <span>الاسم</span>
+            <span>رمز الأمانة</span>
+        </div>
+
+        <div id="liveSearchResults" class="hidden hero-results" aria-live="polite"></div>
+
+        <div class="hero-actions">
+            <a href="report.php?type=lost" class="hero-action primary">
+                <?= icon('search') ?>
+                <span><span class="hero-action-title">فقدتُ شيئاً</span><span class="hero-action-sub">سجّله ليراه من يجده</span></span>
             </a>
-            <a href="report.php?type=found" class="choice-card">
-                <span class="choice-icon"><?= icon('heart', 'ic-lg') ?></span>
-                <span>
-                    <span class="choice-title">وجدتُ شيئاً</span>
-                    <span class="choice-desc">سجّل الأمانة ليصل إليك صاحبها</span>
-                </span>
+            <a href="report.php?type=found" class="hero-action">
+                <?= icon('heart') ?>
+                <span><span class="hero-action-title">وجدتُ شيئاً</span><span class="hero-action-sub">لوجه الله تعالى</span></span>
             </a>
         </div>
+
+        <span class="hero-count">
+            <?= icon('check-circle') ?>
+            <?php if ($successCount > 0): ?>
+                <span>تمت إعادة <strong><?= (int)$successCount ?></strong> أمانة لأصحابها بحمد الله</span>
+            <?php else: ?>
+                <span>كن أول من يعيد أمانة لصاحبها بحمد الله</span>
+            <?php endif; ?>
+        </span>
+    </div>
+
+    <div class="hero-photo">
+        <picture>
+            <source media="(max-width: 760px)" srcset="assets/img/hero-phone-v1.webp" type="image/webp">
+            <img src="assets/img/hero-wide-v1.webp" alt="يدان تسلّمان صندوقاً لصاحبه" width="1600" height="1200" fetchpriority="high">
+        </picture>
+        <span class="hero-hole" aria-hidden="true"></span>
+        <svg class="hero-cord" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M78 100 C 70 60, 92 40, 84 0" fill="none" stroke="#f2a541" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linecap="round"></path>
+        </svg>
     </div>
 </header>
 
-<!-- Search -->
+<!-- What did you lose? (overlaps the hero) -->
 <div class="container">
-    <section class="search-card" id="searchSection" aria-labelledby="searchTitle">
-        <h2 class="search-title" id="searchTitle">ابحث في البلاغات المسجلة</h2>
-        <form id="searchForm" onsubmit="return handleSearchSubmit(event)" role="search">
-            <div class="search-input-group">
-                <label for="mainSearchInput" class="sr-only">ابحث</label>
-                <input
-                    type="search"
-                    id="mainSearchInput"
-                    class="search-input"
-                    placeholder="رقم الهوية، الاسم، أو رمز الأمانة"
-                    autocomplete="off"
-                    required
-                    minlength="2"
-                    dir="rtl"
-                    aria-describedby="searchHint"
-                >
-                <button type="submit" class="btn-search" id="mainSearchBtn">
-                    <?= icon('search') ?><span class="lbl">ابحث</span>
-                </button>
-            </div>
-        </form>
-        <p class="search-hint" id="searchHint">
-            <?= icon('info') ?>
-            <span>يمكنك البحث برقم الهوية أو الجواز، أو رقم IMEI للهاتف (اطلب <bdi dir="ltr">*#06#</bdi> من الهاتف لعرضه)، أو رمز الأمانة، أو الاسم.</span>
-        </p>
-
-        <div id="liveSearchResults" class="hidden mt-3" aria-live="polite"></div>
+    <section class="cat-card" aria-labelledby="catTitle">
+        <div class="cat-head">
+            <h2 id="catTitle">ماذا فقدت؟</h2>
+            <span>اختر النوع لترى البلاغات المسجلة</span>
+        </div>
+        <div class="cat-grid">
+            <?php foreach (['id_card' => 'هوية شخصية', 'passport' => 'جواز سفر', 'phone' => 'هاتف', 'bag' => 'حقيبة أو محفظة', 'keys' => 'مفاتيح', 'other' => 'أغراض أخرى'] as $catKey => $catLabel): ?>
+                <a href="index.php?filter_category=<?= $catKey ?>#browseSection" class="cat-tile"><?= icon($categories[$catKey]['icon']) ?><span><?= $catLabel ?></span></a>
+            <?php endforeach; ?>
+        </div>
     </section>
 </div>
+
+<div class="cord-divider" aria-hidden="true"><span></span><?= tagGlyph('#f2a541', '#f4f1ea') ?><span></span></div>
+
+<!-- How it works -->
+<section class="steps-home" aria-labelledby="stepsTitle">
+    <h2 id="stepsTitle">كيف تعود الأمانة إلى صاحبها؟</h2>
+    <div class="steps-home-grid">
+        <div class="step-card">
+            <span class="step-num-big">١</span>
+            <h3>سجّل البلاغ</h3>
+            <p>ما فقدته أو وجدته، والمنطقة، ورقم جوالك. رقمك لا يظهر في القوائم.</p>
+        </div>
+        <div class="step-card">
+            <span class="step-num-big">٢</span>
+            <h3>يجدك الطرف الآخر</h3>
+            <p>يبحث برقم الوثيقة أو الاسم، ثم يطلب رقمك أو يجيب سؤال التحقق.</p>
+        </div>
+        <div class="step-card">
+            <span class="step-num-big">٣</span>
+            <h3>تعود الأمانة</h3>
+            <p>تستلمها في مكان عام، ثم تغلق البلاغ برمز الإدارة فيُحذف رقمك.</p>
+        </div>
+    </div>
+</section>
 
 <!-- Recent returns (static, no moving ticker) -->
 <?php if (!empty($recentSuccesses)): ?>

@@ -4,13 +4,13 @@
     "description": "منصة طوارئ مجتمعية لإدارة المفقودات والأمانات - غزة",
     "start_url": "/Tajed-Tafqed/public/index.php",
     "display": "standalone",
-    "background_color": "#f0fdfa",
-    "theme_color": "#0b3b37",
+    "background_color": "#f4f1ea",
+    "theme_color": "#14294a",
     "lang": "ar",
     "dir": "rtl",
     "icons": [
         {
-            "src": "assets/logo.svg",
+            "src": "assets/mark.svg",
             "sizes": "any",
             "type": "image/svg+xml"
         }

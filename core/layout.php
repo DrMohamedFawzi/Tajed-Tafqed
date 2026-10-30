@@ -12,7 +12,7 @@ require_once __DIR__ . '/icons.php';
 
 // Bump when style.css or site.js change (static files are cached long-term
 // by nginx and Cloudflare). Keep public/sw.js in sync.
-const ASSET_VER = '3';
+const ASSET_VER = '4';
 
 // How people reach the platform admins (abuse reports, lost owner codes).
 // Shown on about.php and manage.php when set.
@@ -29,6 +29,30 @@ function adminContactHtml(): string
     }
     return 'تواصل مع إدارة المنصة عبر <a href="' . htmlspecialchars(ADMIN_CONTACT_URL) . '" target="_blank" rel="noopener"><bdi>'
         . htmlspecialchars(ADMIN_CONTACT) . '</bdi></a>';
+}
+
+/**
+ * The brand mark: a luggage tag with a tied cord ("reconnected"),
+ * the same shape as the safety tag the platform offers.
+ */
+function brandMark(): string
+{
+    return '<svg class="brand-mark" viewBox="0 0 44 44" aria-hidden="true">'
+        . '<rect width="44" height="44" rx="12" fill="#1e4f8f"></rect>'
+        . '<g transform="rotate(-14 22 22)">'
+        . '<path d="M15 14 L22 8 L29 14 V34 a2 2 0 0 1 -2 2 H17 a2 2 0 0 1 -2 -2 Z" fill="#f2a541"></path>'
+        . '<circle cx="22" cy="15" r="2.6" fill="#1e4f8f"></circle>'
+        . '<path d="M22 15 C 22 9, 27 5, 33 6" fill="none" stroke="#f4f1ea" stroke-width="1.8" stroke-linecap="round"></path>'
+        . '</g></svg>';
+}
+
+/**
+ * Small tag shape used in the hero pill and the section divider.
+ */
+function tagGlyph(string $fill = '#f2a541', string $hole = '#14294a'): string
+{
+    return '<svg viewBox="0 0 16 18" aria-hidden="true"><path d="M3 5 L8 1 L13 5 V16 a1 1 0 0 1 -1 1 H4 a1 1 0 0 1 -1 -1 Z" fill="'
+        . $fill . '"></path><circle cx="8" cy="5.5" r="1.4" fill="' . $hole . '"></circle></svg>';
 }
 
 /**
@@ -62,27 +86,25 @@ function pageStart(string $title, string $active = '', string $extraHead = ''): 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="theme-color" content="#0b3b37">
+    <meta name="theme-color" content="#14294a">
     <meta name="description" content="منصة مجتمعية تساعد أهل غزة على إعادة الوثائق والأغراض المفقودة لأصحابها">
     <title><?= htmlspecialchars($title) ?> | فَقَدتُ ووَجَدتُ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@800&display=swap">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VER ?>">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+    <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
     <link rel="apple-touch-icon" href="assets/logo.svg">
     <?= $extraHead ?>
 </head>
 <body>
 <?= iconSprite() ?>
 <a href="#main" class="skip-link">تخطَّ إلى المحتوى</a>
-<div class="flag-stripe" aria-hidden="true"></div>
-
 <nav class="navbar-top" aria-label="القائمة الرئيسية">
     <div class="container navbar-inner">
         <a href="index.php" class="brand-wrap">
-            <img src="assets/logo.svg" alt="">
+            <?= brandMark() ?>
             <div>
                 <div class="brand-title">فَقَدتُ ووَجَدتُ</div>
                 <div class="brand-sub">منصة مجتمعية للمفقودات - غزة</div>
