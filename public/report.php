@@ -7,8 +7,13 @@
 require_once __DIR__ . '/../core/db.php';
 require_once __DIR__ . '/../core/security.php';
 require_once __DIR__ . '/../core/matcher.php';
+require_once __DIR__ . '/../core/icons.php';
 
 setSecurityHeaders();
+
+// Bump when style.css changes (static files are cached long-term)
+$assetVer = '2';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -61,12 +66,22 @@ $categories = [
 ];
 
 $pageTitles = [
-    'lost' => '📋 تسجيل بلاغ عن مفقود',
-    'found' => '🤲 تسجيل أمانة تم العثور عليها',
-    'tag' => '🏷️ إنشاء ملصق كود الأمانة الوقائي',
-    'imei' => '📱 فحص وتسجيل جهاز بالـ IMEI',
-    'bulk' => '📦 كشف جماعي (للمستشفيات ومراكز الإيواء)',
-    'transport' => '🚗 بلاغ فقدان في المواصلات (تكتك / سيارة)'
+    'lost' => 'تسجيل بلاغ عن مفقود',
+    'found' => 'تسجيل أمانة تم العثور عليها',
+    'tag' => 'إنشاء ملصق كود الأمانة الوقائي',
+    'imei' => 'فحص وتسجيل جهاز بالـ IMEI',
+    'bulk' => 'كشف جماعي (للمستشفيات ومراكز الإيواء)',
+    'transport' => 'بلاغ فقدان في المواصلات (تكتك / سيارة)'
+];
+
+// Icon per report type (core/icons.php)
+$pageIcons = [
+    'lost' => 'file-text',
+    'found' => 'heart',
+    'tag' => 'tag',
+    'imei' => 'smartphone',
+    'bulk' => 'layers',
+    'transport' => 'car'
 ];
 
 // Handle POST submissions
@@ -352,18 +367,18 @@ if (!function_exists('generateWhatsAppShareText')) {
         if (!$res) return '';
         switch ($res['type'] ?? '') {
             case 'lost':
-                return "🔴 مفقود في قطاع غزة: {$res['title']} - المنطقة: {$res['location']}\nلمن يجده يرجى التواصل عبر منصة (فَقَدتُ ووَجَدتُ).";
+                return "مفقود في قطاع غزة: {$res['title']} - المنطقة: {$res['location']}\nلمن يجده يرجى التواصل عبر منصة (فَقَدتُ ووَجَدتُ).";
             case 'found':
                 $dp = !empty($res['drop_point']) ? " - مكان التسليم: {$res['drop_point']}" : "";
-                return "🟢 بشرى سارة: عُثر على {$res['title']} في {$res['location']}{$dp}\nلصاحب الغرض، راجع منصة (فَقَدتُ ووَجَدتُ).";
+                return "بشرى سارة: عُثر على {$res['title']} في {$res['location']}{$dp}\nلصاحب الغرض، راجع منصة (فَقَدتُ ووَجَدتُ).";
             case 'tag':
-                return "🏷️ كود الأمانة الوقائي الخاص بي [{$res['tag_code']}]. إذا عثرت على هذا الغرض، ابحث برقم الكود في منصة (فَقَدتُ ووَجَدتُ).";
+                return "كود الأمانة الوقائي الخاص بي [{$res['tag_code']}]. إذا عثرت على هذا الغرض، ابحث برقم الكود في منصة (فَقَدتُ ووَجَدتُ).";
             case 'imei':
-                return "📱 جهاز مفقود: {$res['title']}\nتنبيه لأصحاب المحلات والبسطات قبل الشراء عبر منصة (فَقَدتُ ووَجَدتُ).";
+                return "جهاز مفقود: {$res['title']}\nتنبيه لأصحاب المحلات والبسطات قبل الشراء عبر منصة (فَقَدتُ ووَجَدتُ).";
             case 'bulk':
-                return "📦 تم رفع كشف يضم {$res['count']} وثيقة مفقودة في {$res['location']} ومودعة لدى {$res['drop_point']}.";
+                return "تم رفع كشف يضم {$res['count']} وثيقة مفقودة في {$res['location']} ومودعة لدى {$res['drop_point']}.";
             case 'transport':
-                return "🚗 مفقود في المواصلات: {$res['title']} ({$res['vehicle']}) - راجع منصة (فَقَدتُ ووَجَدتُ).";
+                return "مفقود في المواصلات: {$res['title']} ({$res['vehicle']}) - راجع منصة (فَقَدتُ ووَجَدتُ).";
             default:
                 return '';
         }
@@ -375,29 +390,35 @@ if (!function_exists('generateWhatsAppShareText')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="theme-color" content="#0d9488">
+    <meta name="theme-color" content="#0b3b37">
     <title><?= htmlspecialchars($pageTitles[$type] ?? 'تسجيل بلاغ') ?> - فَقَدتُ ووَجَدتُ</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= $assetVer ?>">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="apple-touch-icon" href="assets/logo.svg">
 </head>
 <body>
+<?= iconSprite() ?>
+
+<div class="flag-stripe" aria-hidden="true"></div>
 
 <!-- Navbar -->
 <nav class="navbar-top">
     <div class="container navbar-inner">
         <a href="index.php" class="brand-wrap">
-            <img src="assets/logo.svg" alt="شعار فَقَدتُ ووَجَدتُ" style="width: 40px; height: 40px;">
+            <img src="assets/logo.svg" alt="شعار فَقَدتُ ووَجَدتُ">
             <div>
                 <div class="brand-title">فَقَدتُ ووَجَدتُ</div>
                 <div class="brand-sub">منصة طوارئ مجتمعية - غزة</div>
             </div>
         </a>
         <div class="nav-links">
-            <a href="index.php" class="nav-link">🏠 الرئيسية والبحث</a>
-            <a href="index.php#browseSection" class="nav-link">📋 تصفح البلاغات</a>
-            <a href="report.php?type=lost" class="nav-link btn-nav-add">➕ أضف بلاغاً</a>
+            <a href="index.php" class="nav-link nav-home"><?= icon('home') ?> الرئيسية والبحث</a>
+            <a href="index.php#browseSection" class="nav-link"><?= icon('list') ?> تصفح البلاغات</a>
+            <a href="report.php?type=lost" class="nav-link btn-nav-add"><?= icon('plus') ?> أضف بلاغاً</a>
         </div>
     </div>
 </nav>
@@ -405,42 +426,45 @@ if (!function_exists('generateWhatsAppShareText')) {
 <div class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
 
     <!-- Types Navigation Bar -->
-    <div class="filter-tabs" style="justify-content: center; margin-bottom: 2rem;">
-        <a href="report.php?type=lost" class="filter-tab <?= $type === 'lost' ? 'active' : '' ?>">📋 بلاغ مفقود</a>
-        <a href="report.php?type=found" class="filter-tab <?= $type === 'found' ? 'active' : '' ?>">🤲 أمانة معثور عليها</a>
-        <a href="report.php?type=tag" class="filter-tab <?= $type === 'tag' ? 'active' : '' ?>">🏷️ كود الأمانة</a>
-        <a href="report.php?type=imei" class="filter-tab <?= $type === 'imei' ? 'active' : '' ?>">📱 فحص IMEI</a>
-        <a href="report.php?type=transport" class="filter-tab <?= $type === 'transport' ? 'active' : '' ?>">🚗 مفقودات المواصلات</a>
-        <a href="report.php?type=bulk" class="filter-tab <?= $type === 'bulk' ? 'active' : '' ?>">📦 كشف جماعي</a>
+    <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+        <div class="filter-tabs">
+            <a href="report.php?type=lost" class="filter-tab <?= $type === 'lost' ? 'active' : '' ?>"><?= icon('file-text') ?> بلاغ مفقود</a>
+            <a href="report.php?type=found" class="filter-tab <?= $type === 'found' ? 'active' : '' ?>"><?= icon('heart') ?> أمانة معثور عليها</a>
+            <a href="report.php?type=tag" class="filter-tab <?= $type === 'tag' ? 'active' : '' ?>"><?= icon('tag') ?> كود الأمانة</a>
+            <a href="report.php?type=imei" class="filter-tab <?= $type === 'imei' ? 'active' : '' ?>"><?= icon('smartphone') ?> فحص IMEI</a>
+            <a href="report.php?type=transport" class="filter-tab <?= $type === 'transport' ? 'active' : '' ?>"><?= icon('car') ?> مفقودات المواصلات</a>
+            <a href="report.php?type=bulk" class="filter-tab <?= $type === 'bulk' ? 'active' : '' ?>"><?= icon('layers') ?> كشف جماعي</a>
+        </div>
     </div>
 
     <!-- Error Alert -->
     <?php if ($error): ?>
-        <div class="alert alert-danger">
-            <span>⚠️ <?= htmlspecialchars($error) ?></span>
+        <div class="alert alert-danger" style="max-width: 720px; margin-left: auto; margin-right: auto;">
+            <?= icon('alert') ?>
+            <span><?= htmlspecialchars($error) ?></span>
         </div>
     <?php endif; ?>
 
     <!-- Success Result & Radar Match Alert -->
     <?php if ($result): ?>
-        <div class="alert alert-success" style="flex-direction: column;">
-            <div style="font-size: 1.1rem; font-weight: 800; margin-bottom: 0.5rem;">
-                ✅ تم حفظ البلاغ بنجاح في قاعدة البيانات!
+        <div class="alert alert-success" style="flex-direction: column; max-width: 720px; margin-left: auto; margin-right: auto;">
+            <div class="alert-title" style="display: flex; align-items: center; gap: 0.45rem;">
+                <?= icon('check-circle') ?> تم حفظ البلاغ بنجاح في قاعدة البيانات
             </div>
             <p>رقم المرجع في النظام: <strong>#<?= htmlspecialchars($result['id'] ?? $result['tag_code'] ?? '0') ?></strong></p>
             
             <?php if (!empty($radarMatch)): ?>
                 <!-- RADAR MATCH ALERT -->
-                <div style="background: #ffffff; border: 2px dashed #059669; border-radius: 12px; padding: 1.25rem; margin-top: 1rem; width: 100%;">
-                    <h3 style="color: #065f46; font-size: 1.2rem; margin-bottom: 0.5rem;">🎉 بشرى سارة! صاحب هذه الهوية مسجل في الرادار ويبحث عنها!</h3>
+                <div class="result-panel" style="border: 1.5px solid #9fd3b0;">
+                    <h3 style="display: flex; align-items: center; gap: 0.45rem; color: var(--success-dark); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;"><?= icon('radar') ?> بشرى سارة: صاحب هذه الهوية مسجل في الرادار ويبحث عنها</h3>
                     <p style="color: #374151; margin-bottom: 0.75rem;">الاسم المسجل: <strong><?= htmlspecialchars($radarMatch['target_name'] ?? 'الفاقد') ?></strong></p>
                     <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                         <a href="tel:<?= htmlspecialchars($radarMatch['subscriber_phone']) ?>" class="btn btn-primary">
-                            📞 اتصل بصاحب الغرض: <?= htmlspecialchars($radarMatch['subscriber_phone']) ?>
+                            <?= icon('phone') ?> اتصل بصاحب الغرض: <span dir="ltr"><?= htmlspecialchars($radarMatch['subscriber_phone']) ?></span>
                         </a>
                         <?php if (!empty($radarMatch['alt_phone'])): ?>
                             <a href="tel:<?= htmlspecialchars($radarMatch['alt_phone']) ?>" class="btn btn-outline-primary">
-                                📞 هاتف بديل: <?= htmlspecialchars($radarMatch['alt_phone']) ?>
+                                <?= icon('phone') ?> هاتف بديل: <span dir="ltr"><?= htmlspecialchars($radarMatch['alt_phone']) ?></span>
                             </a>
                         <?php endif; ?>
                     </div>
@@ -449,32 +473,31 @@ if (!function_exists('generateWhatsAppShareText')) {
 
             <?php if (!empty($generatedTag)): ?>
                 <!-- TAG GENERATION DISPLAY -->
-                <div style="background: #ffffff; border: 3px dashed var(--primary); border-radius: 16px; padding: 1.5rem; text-align: center; margin-top: 1rem; width: 100%;">
+                <div class="result-panel tag-display">
                     <p style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 0.5rem;">رمز كود الأمانة الوقائي الخاص بك:</p>
-                    <div style="font-size: 2.8rem; font-weight: 900; color: var(--primary-dark); font-family: monospace; letter-spacing: 4px;">
-                        #<?= htmlspecialchars($generatedTag) ?>
-                    </div>
+                    <div class="tag-code">#<?= htmlspecialchars($generatedTag) ?></div>
                     <p style="font-size: 0.85rem; color: var(--slate-700); margin-top: 0.75rem;">
-                        ✍️ اكتب هذا الرمز بقلم حبر أو اطبع ملصقاً وضعه على ظهر هويتك، حقيبتك، أو شاحنك.
+                        اكتب هذا الرمز بقلم حبر أو اطبع ملصقاً وضعه على ظهر هويتك، حقيبتك، أو شاحنك.
                     </p>
-                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="window.print()">🖨️ طباعة بطاقة الكود</button>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="window.print()"><?= icon('printer') ?> طباعة بطاقة الكود</button>
                 </div>
             <?php endif; ?>
 
             <!-- WhatsApp Share Button -->
-            <div style="margin-top: 1.25rem;">
+            <div class="no-print" style="margin-top: 1.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <button class="btn btn-whatsapp" onclick="copyShareText(this, '<?= htmlspecialchars(addslashes(generateWhatsAppShareText($result))) ?>')">
-                    📋 نسخ نص منسق للواتساب والتليجرام
+                    <?= icon('share') ?><span class="lbl">نسخ نص منسق للواتساب والتليجرام</span>
                 </button>
-                <a href="index.php" class="btn btn-outline-primary" style="margin-right: 0.5rem;">العودة للرئيسية</a>
+                <a href="index.php" class="btn btn-outline-primary">العودة للرئيسية</a>
             </div>
         </div>
     <?php endif; ?>
 
     <!-- The Form Card -->
     <div class="form-card">
-        <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--slate-900); margin-bottom: 1.5rem; border-bottom: 2px solid var(--slate-100); padding-bottom: 0.75rem;">
-            <?= htmlspecialchars($pageTitles[$type] ?? 'تسجيل بلاغ') ?>
+        <h2 class="form-title">
+            <?= icon($pageIcons[$type] ?? 'file-text', 'ic-lg') ?>
+            <span><?= htmlspecialchars($pageTitles[$type] ?? 'تسجيل بلاغ') ?></span>
         </h2>
 
         <form method="POST" action="report.php?type=<?= htmlspecialchars($type) ?>">
@@ -493,7 +516,7 @@ if (!function_exists('generateWhatsAppShareText')) {
                 <div class="form-group">
                     <label class="form-label">رقم الهوية أو الرقم التسلسلي (اختياري للبحث الفوري)</label>
                     <input type="text" name="identifier" class="form-control" placeholder="مثال: 405123456 أو رقم جواز السفر" dir="ltr">
-                    <div class="form-text">🔒 لن يُعرض الرقم علناً؛ يتم تحويله إلى هاش رقمي مشفر لحماية الخصوصية ومطابقته فوراً.</div>
+                    <div class="form-text"><?= icon('lock') ?><span>لن يُعرض الرقم علناً؛ يتم تحويله إلى هاش رقمي مشفر لحماية الخصوصية ومطابقته فوراً.</span></div>
                 </div>
 
                 <div class="form-group">
@@ -513,10 +536,10 @@ if (!function_exists('generateWhatsAppShareText')) {
 
                 <?php if ($type === 'found'): ?>
                     <!-- Security Question For Valuables -->
-                    <div style="background: var(--slate-50); border: 1.5px solid var(--slate-200); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
-                        <h4 style="font-weight: 800; color: var(--slate-800); margin-bottom: 0.5rem;">🔐 سؤال التحقق السري (للأموال والذهب والمقتنيات الثمينة)</h4>
-                        <p class="form-text" style="margin-bottom: 0.75rem;">
-                            إذا عثرت على مال أو حقيبة، لا تنشر مواصفاتها علناً! ضع سؤالاً لا يعرف إجابته إلا صاحبها الحقيقي (مثل: ما هو لون المحفظة وكم المبلغ تقريباً؟).
+                    <div class="form-panel">
+                        <h4><?= icon('shield') ?> سؤال التحقق السري (للأموال والذهب والمقتنيات الثمينة)</h4>
+                        <p class="form-text" style="display: block; margin-bottom: 0.75rem;">
+                            إذا عثرت على مال أو حقيبة، لا تنشر مواصفاتها علناً. ضع سؤالاً لا يعرف إجابته إلا صاحبها الحقيقي (مثل: ما هو لون المحفظة وكم المبلغ تقريباً؟).
                         </p>
                         <div class="form-group">
                             <label class="form-label">سؤال التحقق (يظهر للباحثين)</label>
@@ -530,9 +553,9 @@ if (!function_exists('generateWhatsAppShareText')) {
 
                     <!-- Drop Point Section -->
                     <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700;">
+                        <label class="check-row">
                             <input type="checkbox" name="has_drop_point" id="dropCheck" onchange="toggleDropSection(this)">
-                            <span>📦 سلّمتُ الغرض في نقطة أمانات معتمدة (صيدلية / مسجد / مستشفى)</span>
+                            <span>سلّمتُ الغرض في نقطة أمانات معتمدة (صيدلية / مسجد / مستشفى)</span>
                         </label>
                     </div>
 
@@ -595,7 +618,7 @@ if (!function_exists('generateWhatsAppShareText')) {
                 <div class="form-group">
                     <label class="form-label">رقم الـ IMEI أو الرقم التسلسلي (Serial Number) *</label>
                     <input type="text" name="imei" class="form-control" placeholder="15 رقماً (تظهر بالاتصال على #06#*)" dir="ltr" required>
-                    <div class="form-text">💡 يُعتمد هذا السجل من قبل أصحاب محلات الصيانة وبسطات المستعمل لفحص أي جهاز قبل شرائه.</div>
+                    <div class="form-text"><?= icon('info') ?><span>يُعتمد هذا السجل من قبل أصحاب محلات الصيانة وبسطات المستعمل لفحص أي جهاز قبل شرائه.</span></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">المنطقة التي فُقد فيها *</label>
@@ -611,7 +634,7 @@ if (!function_exists('generateWhatsAppShareText')) {
                 </div>
 
             <?php elseif ($type === 'transport'): ?>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">منطقة الانطلاق *</label>
                         <select name="from_area" class="form-control" required>
@@ -629,7 +652,7 @@ if (!function_exists('generateWhatsAppShareText')) {
                         </select>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">تاريخ الركوب</label>
                         <input type="date" name="travel_date" class="form-control" value="<?= date('Y-m-d') ?>">
@@ -639,7 +662,7 @@ if (!function_exists('generateWhatsAppShareText')) {
                         <input type="text" name="time_range" class="form-control" placeholder="مثال: بين 10:00 و 11:30 صباحاً">
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">نوع المركبة *</label>
                         <select name="vehicle_type" class="form-control" required>
@@ -683,7 +706,7 @@ if (!function_exists('generateWhatsAppShareText')) {
                 <div class="form-group">
                     <label class="form-label">قائمة الوثائق والهويات (كل بطاقة في سطر منفصل) *</label>
                     <textarea name="bulk_data" rows="8" class="form-control" placeholder="التنسيق: رقم الهوية | الاسم الرباعي&#10;مثال:&#10;405123456 | أحمد محمد خليل النجار&#10;901234567 | محمود سعيد أبو عودة" required dir="ltr"></textarea>
-                    <div class="form-text">✨ يمكنك نسخ عمودين من Excel ولصقهما مباشرة، أو كتابة: <code>رقم الهوية | الاسم</code>.</div>
+                    <div class="form-text"><?= icon('info') ?><span>يمكنك نسخ عمودين من Excel ولصقهما مباشرة، أو كتابة: <code>رقم الهوية | الاسم</code>.</span></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">رقم هاتف مسؤول النقطة</label>
@@ -692,7 +715,7 @@ if (!function_exists('generateWhatsAppShareText')) {
             <?php endif; ?>
 
             <div class="mt-3">
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-size: 1.05rem;">
+                <button type="submit" class="btn btn-primary btn-block">
                     حفظ وإرسال البلاغ الآن
                 </button>
             </div>
@@ -708,12 +731,9 @@ if (!function_exists('generateWhatsAppShareText')) {
             <div class="sponsor-title">مبادرة مجتمعية تطوعية لإسناد أهلنا الصامدين في قطاع غزة</div>
             <div class="sponsor-company">
                 <span>تم دعمه وتطويره برعاية شركة</span>
-                <strong>MSN-IT UK</strong>
-                <span class="sponsor-flag">🇬🇧</span>
+                <strong dir="ltr">MSN-IT UK</strong>
             </div>
-            <div class="sponsor-desc">
-                حلول تكنولوجيا المعلومات المتقدمة والأنظمة السحابية - المملكة المتحدة
-            </div>
+            <div class="sponsor-desc">حلول تكنولوجيا المعلومات المتقدمة والأنظمة السحابية - المملكة المتحدة</div>
         </div>
 
         <div class="footer-links">
@@ -723,11 +743,20 @@ if (!function_exists('generateWhatsAppShareText')) {
             <a href="report.php?type=found">تسجيل معثور عليه</a>
             <a href="report.php?type=tag">كود الأمانة</a>
         </div>
-        <p class="footer-copy">منصة فَقَدتُ ووَجَدتُ - منصة طوارئ مجتمعية لوجه الله تعالى | صُمم بحب لأهل غزة 🇵🇸</p>
+        <p class="footer-copy">منصة فَقَدتُ ووَجَدتُ - منصة طوارئ مجتمعية لوجه الله تعالى | صُمم بحب لأهل غزة <span class="flag-mini" aria-hidden="true"></span></p>
     </div>
 </footer>
 
 <script>
+// Keep the selected report type visible in the scrollable tab row (mobile)
+(function() {
+    var t = document.querySelector('.filter-tab.active');
+    var row = t && t.parentElement;
+    if (row && row.scrollWidth > row.clientWidth) {
+        row.scrollLeft = t.offsetLeft - (row.clientWidth - t.offsetWidth) / 2;
+    }
+})();
+
 function toggleDropSection(chk) {
     var sec = document.getElementById('dropSection');
     if (sec) {
@@ -735,13 +764,21 @@ function toggleDropSection(chk) {
     }
 }
 
+// Swap only a button's text label so its icon is kept
+function setLabel(btn, text) {
+    var lbl = btn.querySelector('.lbl');
+    if (lbl) { lbl.textContent = text; } else { btn.textContent = text; }
+}
+
 function copyShareText(btn, text) {
+    var lbl = btn.querySelector('.lbl');
+    var old = lbl ? lbl.textContent : btn.textContent;
+    var done = function() {
+        setLabel(btn, 'تم النسخ');
+        setTimeout(function() { setLabel(btn, old); }, 2000);
+    };
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function() {
-            var old = btn.textContent;
-            btn.textContent = '✅ تم النسخ!';
-            setTimeout(function() { btn.textContent = old; }, 2000);
-        });
+        navigator.clipboard.writeText(text).then(done);
     } else {
         var ta = document.createElement('textarea');
         ta.value = text;
@@ -749,8 +786,7 @@ function copyShareText(btn, text) {
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        btn.textContent = '✅ تم النسخ!';
-        setTimeout(function() { btn.textContent = '📋 نسخ نص منسق للواتساب والتليجرام'; }, 2000);
+        done();
     }
 }
 

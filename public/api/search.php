@@ -100,7 +100,7 @@ if (preg_match('/^GZ-[A-Z0-9]{3,10}$/i', $q) || preg_match('/^[0-9]{4,6}$/', $q)
             'contact_visible' => true,
             'contact_info' => $tag['contact_phone'],
             'time_ago' => formatTimeAgo($tag['created_at']),
-            'whatsapp_text' => "🔴 عثرت على غرض يحمل كود الأمانة [{$tag['tag_code']}] التابع للمواطن: {$tag['owner_name']}."
+            'whatsapp_text' => "عثرت على غرض يحمل كود الأمانة [{$tag['tag_code']}] التابع للمواطن: {$tag['owner_name']}."
         ];
     }
 }
@@ -129,7 +129,7 @@ if ($isIdentifierQuery) {
         $catLabel = $categoryLabels[$item['category']] ?? $item['category'];
         $typeLabel = $item['type'] === 'lost' ? 'مفقود' : 'معثور عليه';
 
-        $waText = "🔴 بلاغ [{$typeLabel}] على منصة فقدت ووجدت: {$item['title_or_name']} - المكان: " . ($item['location'] ?: 'قطاع غزة');
+        $waText = "بلاغ [{$typeLabel}] على منصة فقدت ووجدت: {$item['title_or_name']} - المكان: " . ($item['location'] ?: 'قطاع غزة');
 
         $results[] = [
             'id' => (int)$item['id'],
@@ -172,7 +172,7 @@ foreach ($nameItems as $item) {
 
     $catLabel = $categoryLabels[$item['category']] ?? $item['category'];
     $typeLabel = $item['type'] === 'lost' ? 'مفقود' : 'معثور عليه';
-    $waText = "🔴 بلاغ [{$typeLabel}] على منصة فقدت ووجدت: {$item['title_or_name']} - المكان: " . ($item['location'] ?: 'قطاع غزة');
+    $waText = "بلاغ [{$typeLabel}] على منصة فقدت ووجدت: {$item['title_or_name']} - المكان: " . ($item['location'] ?: 'قطاع غزة');
 
     $results[] = [
         'id' => (int)$item['id'],
