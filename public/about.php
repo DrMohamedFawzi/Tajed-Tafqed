@@ -94,11 +94,7 @@ pageStart('كيف تعمل المنصة والخصوصية', 'about');
 
     <section class="info-section">
         <h2><?= icon('alert') ?> بلاغ خاطئ أو مسيء؟ أضعت رمز الإدارة؟</h2>
-        <?php if (ADMIN_CONTACT !== ''): ?>
-            <p>تواصل مع إدارة المنصة وأرسل رقم البلاغ: <strong><?= htmlspecialchars(ADMIN_CONTACT) ?></strong></p>
-        <?php else: ?>
-            <p>تواصل مع إدارة المنصة وأرسل لهم رقم البلاغ الظاهر عليه.</p>
-        <?php endif; ?>
+        <p><?= adminContactHtml() ?>، وأرسل رقم البلاغ الظاهر عليه.</p>
     </section>
 
     <p class="text-center" style="margin: 2rem 0 3rem;">

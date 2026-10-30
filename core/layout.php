@@ -15,8 +15,21 @@ require_once __DIR__ . '/icons.php';
 const ASSET_VER = '3';
 
 // How people reach the platform admins (abuse reports, lost owner codes).
-// Shown on about.php when set, e.g. 'واتساب: 0599000000' or an email address.
-const ADMIN_CONTACT = '';
+// Shown on about.php and manage.php when set.
+const ADMIN_CONTACT = 'تيليجرام: AN0NYM0US2001';
+const ADMIN_CONTACT_URL = 'https://t.me/AN0NYM0US2001';
+
+/**
+ * "contact the admins" sentence ending, with a link when a channel is set.
+ */
+function adminContactHtml(): string
+{
+    if (ADMIN_CONTACT === '') {
+        return 'تواصل مع إدارة المنصة';
+    }
+    return 'تواصل مع إدارة المنصة عبر <a href="' . htmlspecialchars(ADMIN_CONTACT_URL) . '" target="_blank" rel="noopener"><bdi>'
+        . htmlspecialchars(ADMIN_CONTACT) . '</bdi></a>';
+}
 
 /**
  * Areas of the Gaza Strip offered in forms and filters.

@@ -100,7 +100,7 @@ pageStart('إدارة البلاغ', '');
             <?php elseif (empty($item['owner_code_hash'])): ?>
                 <div class="alert alert-warning">
                     <?= icon('info') ?>
-                    <span>هذا البلاغ سُجّل قبل إضافة رموز الإدارة، لذلك لا يمكن إغلاقه من هنا. تواصل مع إدارة المنصة وأرسل لهم رقم البلاغ.</span>
+                    <span>هذا البلاغ سُجّل قبل إضافة رموز الإدارة، لذلك لا يمكن إغلاقه من هنا. <?= adminContactHtml() ?> وأرسل رقم البلاغ.</span>
                 </div>
 
             <?php else: ?>
@@ -127,7 +127,7 @@ pageStart('إدارة البلاغ', '');
                     <div class="privacy-note"><?= icon('lock') ?><span>في الحالتين يُحذف رقم الجوال من المنصة فوراً.</span></div>
                     <button type="submit" class="btn btn-primary btn-block mt-2">تأكيد</button>
                 </form>
-                <p class="band-note" style="margin-top: 1rem;">أضعت رمز الإدارة؟ تواصل مع إدارة المنصة وأرسل لهم رقم البلاغ.</p>
+                <p class="band-note" style="margin-top: 1rem;">أضعت رمز الإدارة؟ <?= adminContactHtml() ?> وأرسل رقم البلاغ.</p>
             <?php endif; ?>
         <?php endif; ?>
     </div>
