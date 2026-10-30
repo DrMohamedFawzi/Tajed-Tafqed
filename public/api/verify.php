@@ -73,14 +73,11 @@ if (!$item || $item['status'] !== 'active') {
 }
 
 if (empty($item['secret_answer_hash'])) {
-    // No secret answer required
+    // No secret question: numbers are revealed through api/contact.php (rate-limited)
     echo json_encode([
-        'success' => true,
-        'match' => true,
-        'message' => 'تم التحقق بنجاح.',
-        'contact_info' => $item['contact_info'] ?: 'غير متوفر',
-        'contact_alt' => $item['contact_alt'] ?: '',
-        'drop_point' => $item['drop_point'] ?: ''
+        'success' => false,
+        'match' => false,
+        'message' => 'هذا البلاغ لا يحتاج سؤال تحقق. استخدم زر «إظهار رقم الجوال».'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

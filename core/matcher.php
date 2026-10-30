@@ -18,7 +18,7 @@ function searchByIdentifier(string $hash): array
     $db = getDB();
     $stmt = $db->prepare(
         "SELECT id, type, category, title_or_name, location, location_area, 
-                drop_point, created_at
+                drop_point, description, event_date, created_at
          FROM items 
          WHERE identifier_hash = :hash AND status = 'active'
          ORDER BY created_at DESC"
@@ -60,7 +60,7 @@ function searchByName(string $name): array
     $whereSQL = implode(' OR ', $conditions);
 
     $sql = "SELECT id, type, category, title_or_name, normalized_name, location, 
-                   location_area, drop_point, created_at,
+                   location_area, drop_point, description, event_date, created_at,
                    ({$scoreSQL}) as relevance_score
             FROM items 
             WHERE status = 'active' AND ({$whereSQL})
@@ -239,7 +239,8 @@ function getPaginatedItems(int $page = 1, int $perPage = 6, ?string $type = null
 
     $whereSQL = !empty($conditions) ? "WHERE " . implode(' AND ', $conditions) : "";
     $sql = "SELECT id, type, category, title_or_name, location, location_area, drop_point, 
-                   secret_question, secret_answer_hash, contact_info, status, created_at,
+                   secret_question, status, created_at, description, event_date,
+                   (contact_info IS NOT NULL AND contact_info != '') AS has_contact,
                    transport_route, transport_time, transport_vehicle
             FROM items 
             {$whereSQL}
@@ -348,9 +349,35 @@ function resolveItem(int $itemId, string $category, string $location): bool
 }
 
 /**
- * Bulk insert items for organizations / hospitals.
+ * Close a report that is no longer needed (not counted as a returned item).
+ * Contact details are erased like on resolve.
  */
-function bulkInsertItems(array $items, string $location, string $dropPoint, string $ip): int
+function closeItem(int $itemId): bool
+{
+    $db = getDB();
+    $stmt = $db->prepare(
+        "UPDATE items SET 
+            status = 'resolved', 
+            resolved_category = 'withdrawn',
+            contact_info = NULL, 
+            contact_alt = NULL, 
+            resolved_at = datetime('now')
+         WHERE id = :id AND status = 'active'"
+    );
+    $stmt->bindValue(':id', $itemId, PDO::PARAM_INT);
+    $stmt->execute();
+    $done = $stmt->rowCount() > 0;
+    if ($done) {
+        logAction('item_withdrawn', "Item ID {$itemId} withdrawn by its owner");
+    }
+    return $done;
+}
+
+/**
+ * Bulk insert items for organizations / hospitals.
+ * All rows share the organisation's phone and one owner code.
+ */
+function bulkInsertItems(array $items, string $location, string $dropPoint, string $ip, ?string $phone = null, ?string $ownerCodeHash = null): int
 {
     $db = getDB();
     $insertedCount = 0;
@@ -360,8 +387,8 @@ function bulkInsertItems(array $items, string $location, string $dropPoint, stri
 
         $stmt = $db->prepare(
             "INSERT INTO items (type, category, identifier_hash, title_or_name, normalized_name, 
-                               location, location_area, drop_point, ip_address) 
-             VALUES ('found', :category, :hash, :title, :norm, :loc, :area, :drop, :ip)"
+                               location, location_area, drop_point, contact_info, owner_code_hash, ip_address) 
+             VALUES ('found', :category, :hash, :title, :norm, :loc, :area, :drop, :phone, :owner, :ip)"
         );
 
         foreach ($items as $item) {
@@ -383,6 +410,8 @@ function bulkInsertItems(array $items, string $location, string $dropPoint, stri
             $stmt->bindValue(':loc', $location);
             $stmt->bindValue(':area', $location);
             $stmt->bindValue(':drop', $dropPoint);
+            $stmt->bindValue(':phone', $phone ?: null);
+            $stmt->bindValue(':owner', $ownerCodeHash);
             $stmt->bindValue(':ip', $ip);
             $stmt->execute();
 

@@ -33,7 +33,7 @@ if (!checkRateLimit($clientIP, 'radar_sub', 10, 60)) {
     http_response_code(429);
     echo json_encode([
         'success' => false,
-        'error' => 'تم تجاوز حد التسجيل في الرادار المسموح به. يرجى المحاولة لاحقاً.'
+        'error' => 'وصلت إلى الحد المسموح لحفظ الأرقام. حاول لاحقاً.'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -52,7 +52,7 @@ $name = trim($data['name'] ?? 'مواطن فاقد لوثيقة/غرض');
 if ($identifier === '' || $phone === '') {
     echo json_encode([
         'success' => false,
-        'error' => 'يرجى تزويد رقم الهوية/الوثيقة ورقم الجوال للتواصل.'
+        'error' => 'يرجى كتابة رقم الوثيقة ورقم جوالك.'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -80,7 +80,7 @@ $checkStmt->execute();
 if ($checkStmt->fetch()) {
     echo json_encode([
         'success' => true,
-        'message' => 'أنت مسجل بالفعل في الرادار لهذا الرقم. سنخطرك فور تسجيله!'
+        'message' => 'رقمك مسجل مسبقاً لهذا البحث. عندما يسجّل أحد هذا الغرض سيظهر له رقمك ليتصل بك.'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -98,9 +98,9 @@ try {
         }
     }
 
-    $msg = 'تم تفعيل الرادار العكسي بنجاح. سيتم تنبيهك وتنبيه أي شخص يعثر على غرضك فوراً.';
+    $msg = 'تم حفظ رقمك. عندما يسجّل أحد هذا الغرض سيظهر له رقمك ليتصل بك.';
     if ($foundNow) {
-        $msg = 'بشرى سارة: يوجد غرض معثور عليه مسجل بالفعل يطابق هذا الرقم، يرجى إعادة البحث في الصفحة الرئيسية!';
+        $msg = 'بشرى سارة: يوجد غرض معثور عليه بهذا الرقم. ابحث عنه مرة أخرى في الصفحة الرئيسية.';
     }
 
     echo json_encode([
@@ -112,6 +112,6 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'حدث خطأ أثناء حفظ الاشتراك بالرادار.'
+        'error' => 'تعذر حفظ رقمك، حاول مرة أخرى.'
     ], JSON_UNESCAPED_UNICODE);
 }

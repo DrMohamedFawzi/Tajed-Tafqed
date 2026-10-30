@@ -29,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $clientIP = getClientIP();
-if (!checkRateLimit($clientIP, 'resolve_item', 15, 1)) {
+// Owner codes are short, so attempts are limited tightly
+if (!checkRateLimit($clientIP, 'resolve_item', 5, 1)) {
     http_response_code(429);
     echo json_encode(['success' => false, 'message' => 'طلبات متكررة، يرجى الانتظار قليلاً.'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -48,7 +49,7 @@ if ($itemId <= 0) {
 }
 
 $db = getDB();
-$stmt = $db->prepare("SELECT id, category, location, location_area, status FROM items WHERE id = :id");
+$stmt = $db->prepare("SELECT id, category, location, location_area, status, owner_code_hash FROM items WHERE id = :id");
 $stmt->bindValue(':id', $itemId, PDO::PARAM_INT);
 $stmt->execute();
 $item = $stmt->fetch();
@@ -63,6 +64,15 @@ if ($item['status'] === 'resolved') {
         'success' => true,
         'message' => 'تم إنهاء هذا البلاغ مسبقاً والحمد لله.',
         'new_count' => getSuccessCount()
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (!verifyOwnerCode((string)($data['owner_code'] ?? ''), $item['owner_code_hash'] ?? null)) {
+    logAction('resolve_denied', "Item ID {$itemId}: wrong or missing owner code");
+    echo json_encode([
+        'success' => false,
+        'message' => 'رمز الإدارة غير صحيح. يستطيع صاحب البلاغ فقط إغلاقه باستخدام الرمز الذي ظهر له عند التسجيل.'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

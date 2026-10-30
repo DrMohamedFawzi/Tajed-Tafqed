@@ -1,6 +1,7 @@
-const CACHE_NAME = 'lf-v2';
+const CACHE_NAME = 'lf-v3';
 const STATIC_ASSETS = [
-    './assets/css/style.css?v=2'
+    './assets/css/style.css?v=3',
+    './assets/js/site.js?v=3'
 ];
 
 // Install: cache static assets

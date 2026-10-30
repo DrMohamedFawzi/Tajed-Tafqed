@@ -150,10 +150,11 @@ function checkRateLimit(string $ip, string $action, int $maxAttempts = 10, int $
 {
     $db = getDB();
 
-    // Clean up old entries (older than the window)
+    // Clean up old entries for this action only (other actions use different windows)
     $cleanupStmt = $db->prepare(
-        "DELETE FROM rate_limits WHERE timestamp < datetime('now', :window)"
+        "DELETE FROM rate_limits WHERE action = :action AND timestamp < datetime('now', :window)"
     );
+    $cleanupStmt->bindValue(':action', $action);
     $cleanupStmt->bindValue(':window', "-{$windowMinutes} minutes");
     $cleanupStmt->execute();
 
@@ -205,30 +206,68 @@ function logAction(string $action, string $details = ''): void
 
 /**
  * Get the real client IP address.
- * Checks X-Forwarded-For header, then falls back to REMOTE_ADDR.
+ * Uses REMOTE_ADDR only: the web server already restores the visitor IP from
+ * trusted proxies (Cloudflare -> nginx -> Apache). Raw X-Forwarded-For is
+ * client-controlled and would let anyone bypass the rate limits.
  *
  * @return string
  */
 function getClientIP(): string
 {
-    // Check for proxy headers
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        // X-Forwarded-For can contain multiple IPs; take the first one
-        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-        $ip = trim($ips[0]);
-        if (filter_var($ip, FILTER_VALIDATE_IP)) {
-            return $ip;
-        }
-    }
-
-    if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
-        $ip = trim($_SERVER['HTTP_X_REAL_IP']);
-        if (filter_var($ip, FILTER_VALIDATE_IP)) {
-            return $ip;
-        }
-    }
-
     return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+}
+
+/**
+ * Generate a private owner code for managing a report, e.g. "K7P-29M".
+ * Uses an alphabet without look-alike characters (0/O, 1/I/L).
+ *
+ * @return string
+ */
+function generateOwnerCode(): string
+{
+    $alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+    $code = '';
+    for ($i = 0; $i < 6; $i++) {
+        $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+    }
+    return substr($code, 0, 3) . '-' . substr($code, 3);
+}
+
+/**
+ * Normalize an owner code typed by a user (case, spaces, dashes).
+ *
+ * @param string $code
+ * @return string
+ */
+function normalizeOwnerCode(string $code): string
+{
+    return strtoupper(preg_replace('/[\s\-]/', '', $code));
+}
+
+/**
+ * Hash an owner code for storage.
+ *
+ * @param string $code
+ * @return string
+ */
+function hashOwnerCode(string $code): string
+{
+    return password_hash(normalizeOwnerCode($code), PASSWORD_BCRYPT);
+}
+
+/**
+ * Verify an owner code against its stored hash.
+ *
+ * @param string $code
+ * @param string|null $hash
+ * @return bool
+ */
+function verifyOwnerCode(string $code, ?string $hash): bool
+{
+    if (empty($hash) || trim($code) === '') {
+        return false;
+    }
+    return password_verify(normalizeOwnerCode($code), $hash);
 }
 
 /**

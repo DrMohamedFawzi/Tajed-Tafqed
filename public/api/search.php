@@ -56,6 +56,7 @@ $categoryLabels = [
     'bag' => 'حقيبة',
     'document' => 'وثائق',
     'money' => 'نقود/ذهب',
+    'keys' => 'مفاتيح',
     'other' => 'أخرى'
 ];
 
@@ -121,10 +122,8 @@ if ($isIdentifierQuery) {
         $fullItem = $itemStmt->fetch() ?: [];
 
         $hasSecret = !empty($fullItem['secret_question']) && !empty($fullItem['secret_answer_hash']);
-        $contactVisible = !$hasSecret && (!empty($item['drop_point']) || $item['type'] === 'lost');
-
-        $maskedContact = !empty($fullItem['contact_info']) ? maskPhone($fullItem['contact_info']) : '';
-        $finalContact = $contactVisible ? ($fullItem['contact_info'] ?? '') : $maskedContact;
+        // Numbers are revealed on request only (api/contact.php or api/verify.php)
+        $hasContact = !empty($fullItem['contact_info']);
 
         $catLabel = $categoryLabels[$item['category']] ?? $item['category'];
         $typeLabel = $item['type'] === 'lost' ? 'مفقود' : 'معثور عليه';
@@ -142,8 +141,11 @@ if ($isIdentifierQuery) {
             'drop_point' => $item['drop_point'] ?: null,
             'has_secret_question' => $hasSecret,
             'secret_question' => $hasSecret ? $fullItem['secret_question'] : null,
-            'contact_visible' => $contactVisible,
-            'contact_info' => $finalContact,
+            'contact_visible' => false,
+            'has_contact' => $hasContact,
+            'contact_info' => '',
+            'description' => $item['description'] ?? '',
+            'event_date' => $item['event_date'] ?? '',
             'time_ago' => formatTimeAgo($item['created_at']),
             'whatsapp_text' => $waText
         ];
@@ -165,10 +167,8 @@ foreach ($nameItems as $item) {
     $fullItem = $itemStmt->fetch() ?: [];
 
     $hasSecret = !empty($fullItem['secret_question']) && !empty($fullItem['secret_answer_hash']);
-    $contactVisible = !$hasSecret && (!empty($item['drop_point']) || $item['type'] === 'lost');
-
-    $maskedContact = !empty($fullItem['contact_info']) ? maskPhone($fullItem['contact_info']) : '';
-    $finalContact = $contactVisible ? ($fullItem['contact_info'] ?? '') : $maskedContact;
+    // Numbers are revealed on request only (api/contact.php or api/verify.php)
+    $hasContact = !empty($fullItem['contact_info']);
 
     $catLabel = $categoryLabels[$item['category']] ?? $item['category'];
     $typeLabel = $item['type'] === 'lost' ? 'مفقود' : 'معثور عليه';
@@ -185,8 +185,11 @@ foreach ($nameItems as $item) {
         'drop_point' => $item['drop_point'] ?: null,
         'has_secret_question' => $hasSecret,
         'secret_question' => $hasSecret ? $fullItem['secret_question'] : null,
-        'contact_visible' => $contactVisible,
-        'contact_info' => $finalContact,
+        'contact_visible' => false,
+        'has_contact' => $hasContact,
+        'contact_info' => '',
+        'description' => $item['description'] ?? '',
+        'event_date' => $item['event_date'] ?? '',
         'time_ago' => formatTimeAgo($item['created_at']),
         'whatsapp_text' => $waText
     ];
@@ -202,12 +205,13 @@ if (empty($results)) {
         $subs = checkRadarMatch($identHash);
         if (!empty($subs)) {
             $hasRadar = true;
-            $radarMessage = 'أنت مسجل بالفعل في الرادار العكسي لهذا الرقم، سنخطرك فور تسجيله.';
+            $radarMessage = 'رقمك مسجل مسبقاً لهذا البحث. عندما يسجّل أحد هذا الغرض سيظهر له رقمك ليتصل بك.';
         } else {
-            $radarMessage = 'لم يُعثر على هذا الرقم في قاعدة البيانات. سجّل رقم جوالك لتفعيل الرادار ونبلغك فوراً عند العثور عليه.';
+            $radarMessage = 'لا يوجد بلاغ بهذا الرقم حتى الآن. اترك رقم جوالك: عندما يسجّل أحد هذا الغرض سيظهر له رقمك ليتصل بك.';
         }
     } else {
-        $radarMessage = 'لم نجد أي بلاغ يطابق بحثك. يمكنك تسجيل رقمك في الرادار للتنبيه التلقائي.';
+        // Name searches cannot be matched automatically later (only document numbers can)
+        $radarMessage = 'لم نجد بلاغاً يطابق بحثك حتى الآن. سجّل بلاغ مفقود ليراه من يجد غرضك، أو ابحث برقم الوثيقة إن كان معك.';
     }
 }
 
@@ -218,5 +222,6 @@ echo json_encode([
     'count' => count($results),
     'results' => $results,
     'has_radar' => $hasRadar,
+    'radar_available' => $isIdentifierQuery && !$hasRadar,
     'radar_message' => $radarMessage
 ], JSON_UNESCAPED_UNICODE);

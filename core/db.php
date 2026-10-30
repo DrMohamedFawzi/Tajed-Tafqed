@@ -57,6 +57,7 @@ function getDB(): PDO
                 initializeSchema($_dbInstance);
             }
         }
+        migrateSchema($_dbInstance);
     } catch (PDOException $e) {
         error_log('Database connection failed: ' . $e->getMessage());
         die('خطأ في الاتصال بقاعدة البيانات'); // Database connection error
@@ -175,6 +176,34 @@ SQL;
         $statement = trim($statement);
         if (!empty($statement)) {
             $db->exec($statement);
+        }
+    }
+}
+
+/**
+ * Add columns introduced after the first release (additive only, safe on live data).
+ * - owner_code_hash: bcrypt hash of the private code that lets the reporter close the report
+ * - description: optional details (colour, marks)
+ * - event_date: date the item was lost / found (as entered by the reporter)
+ *
+ * @param PDO $db
+ */
+function migrateSchema(PDO $db): void
+{
+    $existing = [];
+    foreach ($db->query("PRAGMA table_info(items)")->fetchAll() as $col) {
+        $existing[$col['name']] = true;
+    }
+
+    $columns = [
+        'owner_code_hash' => 'TEXT',
+        'description' => 'TEXT',
+        'event_date' => 'TEXT',
+    ];
+
+    foreach ($columns as $name => $type) {
+        if (!isset($existing[$name])) {
+            $db->exec("ALTER TABLE items ADD COLUMN {$name} {$type}");
         }
     }
 }
