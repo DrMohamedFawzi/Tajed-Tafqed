@@ -9,6 +9,7 @@ require_once __DIR__ . '/../core/db.php';
 require_once __DIR__ . '/../core/security.php';
 require_once __DIR__ . '/../core/matcher.php';
 require_once __DIR__ . '/../core/layout.php';
+require_once __DIR__ . '/../core/cards.php';
 
 setSecurityHeaders();
 
@@ -42,31 +43,6 @@ $totalItems = getPaginatedCount($filterType, $filterCategory, $filterArea, 'acti
 $totalPages = max(1, (int)ceil($totalItems / $perPage));
 $currentPage = min($currentPage, $totalPages);
 $paginatedItems = getPaginatedItems($currentPage, $perPage, $filterType, $filterCategory, $filterArea, 'active');
-
-if (!function_exists('formatCardTime')) {
-    function formatCardTime($datetime): string {
-        if (!$datetime) return 'الآن';
-        try {
-            $now = new DateTime('now');
-            $ago = new DateTime($datetime);
-            $diff = $now->diff($ago);
-            if ($diff->y > 0) return "قبل {$diff->y} سنة";
-            if ($diff->m > 0) return "قبل {$diff->m} شهر";
-            if ($diff->d > 0) return "قبل {$diff->d} يوم";
-            if ($diff->h > 0) return "قبل {$diff->h} ساعة";
-            if ($diff->i > 0) return "قبل {$diff->i} دقيقة";
-            return "الآن";
-        } catch (Exception $e) {
-            return 'مؤخراً';
-        }
-    }
-}
-
-// "2026-10-29" -> "29/10/2026"
-function formatEventDate(?string $date): string {
-    if (empty($date) || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m)) return '';
-    return "{$m[3]}/{$m[2]}/{$m[1]}";
-}
 
 $filterQs = '&filter_category=' . urlencode((string)$filterCategory) . '&filter_area=' . urlencode((string)$filterArea);
 $pageQs = '&filter_type=' . urlencode((string)$filterType) . $filterQs;
@@ -129,6 +105,8 @@ try { if (sessionStorage.getItem('lfSplashSeen')) { var s = document.getElementB
             <span>رمز الأمانة</span>
         </div>
 
+        <a href="find.php" class="hero-spec-link"><?= icon('list') ?> لا تعرف الرقم؟ ابحث بالمواصفات (اللون، الماركة، ما بداخله...)</a>
+
         <div id="liveSearchResults" class="hidden hero-results" aria-live="polite"></div>
 
         <div class="hero-actions">
@@ -169,11 +147,11 @@ try { if (sessionStorage.getItem('lfSplashSeen')) { var s = document.getElementB
     <section class="cat-card" aria-labelledby="catTitle">
         <div class="cat-head">
             <h2 id="catTitle">ماذا فقدت؟</h2>
-            <span>اختر النوع لترى البلاغات المسجلة</span>
+            <span>اختر النوع ثم اكتب مواصفاته، ونرتّب لك الأقرب</span>
         </div>
         <div class="cat-grid">
             <?php foreach (['id_card' => 'هوية شخصية', 'passport' => 'جواز سفر', 'phone' => 'هاتف', 'bag' => 'حقيبة أو محفظة', 'keys' => 'مفاتيح', 'other' => 'أغراض أخرى'] as $catKey => $catLabel): ?>
-                <a href="index.php?filter_category=<?= $catKey ?>#browseSection" class="cat-tile"><?= icon($categories[$catKey]['icon']) ?><span><?= $catLabel ?></span></a>
+                <a href="find.php?category=<?= $catKey ?>" class="cat-tile"><?= icon($categories[$catKey]['icon']) ?><span><?= $catLabel ?></span></a>
             <?php endforeach; ?>
         </div>
     </section>
@@ -295,82 +273,7 @@ try { if (sessionStorage.getItem('lfSplashSeen')) { var s = document.getElementB
     <?php else: ?>
         <div class="items-grid">
             <?php foreach ($paginatedItems as $item): ?>
-                <?php
-                $catInfo = $categories[$item['category']] ?? ['name' => $item['category'], 'icon' => 'package'];
-                $isLost = $item['type'] === 'lost';
-                $badgeText = $isLost ? 'مفقود' : 'معثور عليه';
-                $hasSecret = !empty($item['secret_question']);
-                $eventDate = formatEventDate($item['event_date'] ?? null);
-                $shareText = ($isLost ? 'مفقود' : 'معثور عليه') . ': ' . $item['title_or_name'] . ' - ' . ($item['location'] ?: 'قطاع غزة') . "\nعلى منصة فَقَدتُ ووَجَدتُ";
-                ?>
-                <article class="item-card <?= $isLost ? 'type-lost' : 'type-found' ?>">
-                    <div>
-                        <div class="item-card-header">
-                            <span class="badge <?= $isLost ? 'badge-lost' : 'badge-found' ?>">
-                                <span class="dot <?= $isLost ? 'dot-lost' : 'dot-found' ?>"></span>
-                                <span><?= $badgeText ?></span>
-                                <span>·</span>
-                                <span><?= htmlspecialchars($catInfo['name']) ?></span>
-                            </span>
-                            <span class="item-time" title="وقت النشر"><?= icon('clock') ?> <?= formatCardTime($item['created_at']) ?></span>
-                        </div>
-
-                        <h3 class="item-title">
-                            <?= icon($catInfo['icon']) ?>
-                            <span><?= htmlspecialchars($item['title_or_name']) ?></span>
-                        </h3>
-
-                        <?php if (!empty($item['description'])): ?>
-                            <p class="item-desc"><?= htmlspecialchars($item['description']) ?></p>
-                        <?php endif; ?>
-
-                        <div class="item-meta">
-                            <div class="item-meta-row">
-                                <?= icon('map-pin') ?>
-                                <span><?= htmlspecialchars($item['location'] ?: ($item['location_area'] ?: 'قطاع غزة')) ?></span>
-                            </div>
-                            <?php if ($eventDate): ?>
-                                <div class="item-meta-row">
-                                    <?= icon('clock') ?>
-                                    <span><?= $isLost ? 'تاريخ الفقدان' : 'تاريخ العثور' ?>: <?= $eventDate ?></span>
-                                </div>
-                            <?php endif; ?>
-                            <?php if (!empty($item['transport_route'])): ?>
-                                <div class="item-meta-row route">
-                                    <?= icon('car') ?>
-                                    <span><?= htmlspecialchars($item['transport_route']) ?> (<?= htmlspecialchars($item['transport_vehicle'] ?? '') ?>)</span>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-
-                        <?php if (!empty($item['drop_point'])): ?>
-                            <div class="drop-point-pill">
-                                <?= icon('package') ?>
-                                <span>مكان الاستلام:</span>
-                                <strong><?= htmlspecialchars($item['drop_point']) ?></strong>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div>
-                        <div class="item-card-footer">
-                            <?php if ($hasSecret): ?>
-                                <button type="button" class="btn btn-primary btn-sm" data-action="verify" data-id="<?= (int)$item['id'] ?>" data-question="<?= htmlspecialchars($item['secret_question']) ?>">
-                                    <?= icon('lock') ?> هذا لي، أريد التواصل
-                                </button>
-                            <?php elseif (!empty($item['has_contact'])): ?>
-                                <button type="button" class="btn btn-primary btn-sm" data-action="reveal" data-id="<?= (int)$item['id'] ?>">
-                                    <?= icon('phone') ?><span class="lbl">إظهار رقم الجوال</span>
-                                </button>
-                            <?php endif; ?>
-
-                            <button type="button" class="btn btn-whatsapp btn-sm" data-action="share" data-text="<?= htmlspecialchars($shareText) ?>">
-                                <?= icon('share') ?> مشاركة واتساب
-                            </button>
-                        </div>
-                        <a href="manage.php?id=<?= (int)$item['id'] ?>" class="owner-link">أنا صاحب هذا البلاغ: إغلاقه أو حذفه</a>
-                    </div>
-                </article>
+                <?php renderItemCard($item); ?>
             <?php endforeach; ?>
         </div>
 
@@ -478,6 +381,11 @@ function renderResults(results) {
         html += '<span class="item-time">' + escHtml(item.time_ago || '') + '</span>';
         html += '</div>';
         html += '<div class="result-title">' + escHtml(item.title) + '</div>';
+        if (item.specs && item.specs.length) {
+            html += '<dl class="spec-list">';
+            item.specs.forEach(function(sp) { html += '<div><dt>' + escHtml(sp.label) + '</dt><dd>' + escHtml(sp.value) + '</dd></div>'; });
+            html += '</dl>';
+        }
         if (item.description) html += '<p class="item-desc">' + escHtml(item.description) + '</p>';
         html += '<div class="item-meta-row result-loc">' + ic('map-pin') + '<span>' + escHtml(item.location) + '</span></div>';
         if (item.drop_point) {

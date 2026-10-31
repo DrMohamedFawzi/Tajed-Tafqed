@@ -1963,3 +1963,128 @@ body { background-color: var(--page); }
 
 /* Splash in navy */
 .splash-overlay { background: linear-gradient(160deg, #14294a 0%, #1e3a66 100%); }
+
+/* ==========================================================================
+   Item specifications: type tiles, per-type fields, spec list, match badge
+   ========================================================================== */
+
+.type-tiles {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+}
+@media (max-width: 640px) { .type-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.type-tile { position: relative; cursor: pointer; }
+.type-tile input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.type-tile span {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+    padding: 0.75rem 0.4rem;
+    border: 1.5px solid var(--slate-200);
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--slate-800);
+    transition: border-color 0.15s, background 0.15s;
+    min-height: 44px;
+}
+.type-tile .ic { width: 24px; height: 24px; color: var(--primary); }
+.type-tile:hover span { border-color: var(--primary); }
+.type-tile input:checked + span { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); box-shadow: inset 0 0 0 1px var(--primary); }
+.type-tile input:focus-visible + span { outline: 3px solid rgb(30 79 143 / 0.45); outline-offset: 2px; }
+
+.attr-area {
+    background: var(--page);
+    border: 1px solid #e5dfd1;
+    border-radius: 12px;
+    padding: 1rem 1.1rem 0.5rem;
+    margin-bottom: 1.25rem;
+}
+.attr-area > .form-text { margin: 0 0 0.75rem; }
+.attr-empty-note { font-size: 0.88rem; color: var(--slate-600); margin-bottom: 0.75rem; }
+.attr-area:has(.attr-group.active) .attr-empty-note { display: none; }
+.attr-group { display: none; border: 0; padding: 0; margin: 0; min-width: 0; }
+.attr-group.active { display: block; }
+.attr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; }
+@media (max-width: 560px) { .attr-grid { grid-template-columns: 1fr; } }
+.attr-group .form-group { margin-bottom: 0.9rem; }
+
+.private-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-light);
+    border-radius: 999px;
+    padding: 0 0.45rem;
+    vertical-align: 1px;
+}
+.private-tag .ic { width: 11px; height: 11px; }
+
+/* Specs on cards */
+.spec-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0 0 0.65rem;
+}
+.spec-list div {
+    display: inline-flex;
+    gap: 0.3rem;
+    background: var(--slate-100);
+    border-radius: 999px;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.78rem;
+}
+.spec-list dt { color: var(--slate-600); }
+.spec-list dt::after { content: ':'; }
+.spec-list dd { color: var(--slate-900); font-weight: 600; }
+
+/* Match badge */
+.match-badge {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    background: var(--primary-light);
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.75rem;
+}
+.match-meter { width: 64px; height: 6px; border-radius: 999px; background: #ffffff; overflow: hidden; }
+.match-meter span { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+.match-fields { font-weight: 400; color: var(--slate-600); }
+
+.match-section { margin-top: 1rem; }
+.find-results { margin-top: 2rem; }
+
+/* Segmented choice */
+.seg-control { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
+.seg-control label { position: relative; cursor: pointer; }
+.seg-control input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+.seg-control span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1.5px solid var(--slate-200);
+    border-radius: 999px;
+    background: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+.seg-control input:checked + span { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
+
+.hero-spec-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.4rem; color: var(--on-ink-hl); font-size: 0.92rem; text-decoration: underline; text-underline-offset: 4px; }
+.hero-spec-link:hover { color: #ffffff; }

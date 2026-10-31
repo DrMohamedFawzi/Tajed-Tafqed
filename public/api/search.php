@@ -20,6 +20,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
 require_once __DIR__ . '/../../core/db.php';
 require_once __DIR__ . '/../../core/security.php';
 require_once __DIR__ . '/../../core/matcher.php';
+require_once __DIR__ . '/../../core/attributes.php';
 
 // Rate limiting: 30 requests per minute
 $clientIP = getClientIP();
@@ -145,6 +146,7 @@ if ($isIdentifierQuery) {
             'has_contact' => $hasContact,
             'contact_info' => '',
             'description' => $item['description'] ?? '',
+            'specs' => publicAttributes($item['category'], decodeAttributes($item['attributes'] ?? null)),
             'event_date' => $item['event_date'] ?? '',
             'time_ago' => formatTimeAgo($item['created_at']),
             'whatsapp_text' => $waText
@@ -189,6 +191,7 @@ foreach ($nameItems as $item) {
         'has_contact' => $hasContact,
         'contact_info' => '',
         'description' => $item['description'] ?? '',
+            'specs' => publicAttributes($item['category'], decodeAttributes($item['attributes'] ?? null)),
         'event_date' => $item['event_date'] ?? '',
         'time_ago' => formatTimeAgo($item['created_at']),
         'whatsapp_text' => $waText

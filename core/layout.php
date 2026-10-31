@@ -12,7 +12,7 @@ require_once __DIR__ . '/icons.php';
 
 // Bump when style.css or site.js change (static files are cached long-term
 // by nginx and Cloudflare). Keep public/sw.js in sync.
-const ASSET_VER = '4';
+const ASSET_VER = '5';
 
 // How people reach the platform admins (abuse reports, lost owner codes).
 // Shown on about.php and manage.php when set.

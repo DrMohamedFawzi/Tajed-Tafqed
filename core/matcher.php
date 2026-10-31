@@ -18,7 +18,8 @@ function searchByIdentifier(string $hash): array
     $db = getDB();
     $stmt = $db->prepare(
         "SELECT id, type, category, title_or_name, location, location_area, 
-                drop_point, description, event_date, created_at
+                drop_point, description, event_date, attributes, secret_question, created_at,
+                (contact_info IS NOT NULL AND contact_info != '') AS has_contact
          FROM items 
          WHERE identifier_hash = :hash AND status = 'active'
          ORDER BY created_at DESC"
@@ -60,7 +61,7 @@ function searchByName(string $name): array
     $whereSQL = implode(' OR ', $conditions);
 
     $sql = "SELECT id, type, category, title_or_name, normalized_name, location, 
-                   location_area, drop_point, description, event_date, created_at,
+                   location_area, drop_point, description, event_date, attributes, created_at,
                    ({$scoreSQL}) as relevance_score
             FROM items 
             WHERE status = 'active' AND ({$whereSQL})
@@ -239,7 +240,7 @@ function getPaginatedItems(int $page = 1, int $perPage = 6, ?string $type = null
 
     $whereSQL = !empty($conditions) ? "WHERE " . implode(' AND ', $conditions) : "";
     $sql = "SELECT id, type, category, title_or_name, location, location_area, drop_point, 
-                   secret_question, status, created_at, description, event_date,
+                   secret_question, status, created_at, description, event_date, attributes,
                    (contact_info IS NOT NULL AND contact_info != '') AS has_contact,
                    transport_route, transport_time, transport_vehicle
             FROM items 
@@ -427,4 +428,122 @@ function bulkInsertItems(array $items, string $location, string $dropPoint, stri
         }
         return 0;
     }
+}
+
+/**
+ * Rank active reports of one category against a set of specifications.
+ *
+ * Score (0-100) = 85% specification match + 10% same area + 5% date within a week.
+ * - select fields: exact match; numbers: within 15% (half credit within 35%);
+ *   text: share of the seeker's words found in the item's field, or half credit
+ *   when found only in the item's title/description (older reports without specs).
+ * - a field the item left empty counts as unknown (half weight in the total).
+ *
+ * @param string      $category  items.category
+ * @param array       $attrs     readAttributes() output from the seeker
+ * @param string|null $type      'lost' | 'found' to look only at that side
+ * @return array items (public columns) with match_score and matched_labels
+ */
+function matchItems(string $category, array $attrs, ?string $type = null, ?string $area = null, ?string $date = null, int $limit = 12, int $excludeId = 0): array
+{
+    require_once __DIR__ . '/attributes.php';
+    $schema = attributeSchema()[$category] ?? [];
+    $attrs = array_intersect_key($attrs, $schema);
+    if (empty($attrs)) {
+        return [];
+    }
+
+    $db = getDB();
+    $sql = "SELECT id, type, category, title_or_name, normalized_name, location, location_area, drop_point,
+                   secret_question, status, created_at, description, event_date, attributes,
+                   (contact_info IS NOT NULL AND contact_info != '') AS has_contact,
+                   transport_route, transport_time, transport_vehicle
+            FROM items
+            WHERE status = 'active' AND category = :cat AND id != :ex";
+    if ($type === 'lost' || $type === 'found') {
+        $sql .= " AND type = :type";
+    }
+    $sql .= " ORDER BY created_at DESC LIMIT 400";
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':cat', $category);
+    $stmt->bindValue(':ex', $excludeId, PDO::PARAM_INT);
+    if ($type === 'lost' || $type === 'found') {
+        $stmt->bindValue(':type', $type);
+    }
+    $stmt->execute();
+
+    $words = function (string $s): array {
+        return array_values(array_filter(explode(' ', normalizeArabic($s)), fn($w) => mb_strlen($w) >= 2));
+    };
+
+    $results = [];
+    foreach ($stmt->fetchAll() as $item) {
+        $itemAttrs = decodeAttributes($item['attributes'] ?? null);
+        $haystack = ' ' . normalizeArabic((string)$item['title_or_name']) . ' ' . ($item['normalized_name'] ?? '') . ' ' . normalizeArabic((string)($item['description'] ?? '')) . ' ';
+        $got = 0.0;
+        $total = 0.0;
+        $matched = [];
+
+        foreach ($attrs as $key => $want) {
+            $f = $schema[$key];
+            $w = (float)$f['weight'];
+            $have = (string)($itemAttrs[$key] ?? '');
+
+            if ($have === '') {
+                $total += $w / 2;
+                if ($f['type'] !== 'number') {
+                    $tokens = $words($want);
+                    $hits = count(array_filter($tokens, fn($t) => mb_strpos($haystack, $t) !== false));
+                    if ($tokens && $hits) {
+                        $got += ($w / 2) * ($hits / count($tokens));
+                    }
+                }
+                continue;
+            }
+
+            $total += $w;
+            $part = 0.0;
+            if ($f['type'] === 'select') {
+                $part = $want === $have ? 1.0 : 0.0;
+            } elseif ($f['type'] === 'number') {
+                $a = (float)$want;
+                $b = (float)$have;
+                $diff = abs($a - $b) / max(1.0, max($a, $b));
+                $part = $diff <= 0.15 ? 1.0 : ($diff <= 0.35 ? 0.5 : 0.0);
+            } else {
+                $tokens = $words($want);
+                $haveNorm = ' ' . normalizeArabic($have) . ' ';
+                if ($tokens) {
+                    $hits = count(array_filter($tokens, fn($t) => mb_strpos($haveNorm, $t) !== false));
+                    $part = $hits / count($tokens);
+                }
+            }
+            $got += $w * $part;
+            if ($part >= 0.5 && empty($f['private'])) {
+                $matched[] = $f['label'];
+            }
+        }
+
+        $specScore = $total > 0 ? $got / $total : 0;
+        $score = 85 * $specScore;
+        if ($area && $area === $item['location_area']) {
+            $score += 10;
+        }
+        if ($date && !empty($item['event_date'])) {
+            $days = abs((strtotime($date) - strtotime($item['event_date'])) / 86400);
+            if ($days <= 7) {
+                $score += 5;
+            }
+        }
+
+        if ($score >= 35) {
+            $item['match_score'] = (int)round(min(100, $score));
+            $item['matched_labels'] = $matched;
+            unset($item['normalized_name']);
+            $results[] = $item;
+        }
+    }
+
+    usort($results, fn($x, $y) => $y['match_score'] <=> $x['match_score']);
+    return array_slice($results, 0, $limit);
 }

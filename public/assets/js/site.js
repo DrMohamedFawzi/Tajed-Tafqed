@@ -221,6 +221,28 @@ document.addEventListener('click', function(e) {
     }
 });
 
+/* ---------- Specification fields: show the chosen item type's fields ---------- */
+function initAttrForms() {
+    document.querySelectorAll('.attr-form').forEach(function(form) {
+        var groups = form.querySelectorAll('.attr-group');
+        var note = form.querySelector('.attr-empty-note');
+        function show(cat) {
+            groups.forEach(function(g) {
+                var on = g.getAttribute('data-cat') === cat;
+                g.classList.toggle('active', on);
+                g.querySelectorAll('input, select, textarea').forEach(function(el) { el.disabled = !on; });
+            });
+            if (note) note.classList.toggle('hidden', !!cat);
+        }
+        form.addEventListener('change', function(e) {
+            if (e.target.name === 'category') show(e.target.value);
+        });
+        var checked = form.querySelector('[name="category"]:checked');
+        show(checked ? checked.value : '');
+    });
+}
+initAttrForms();
+
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function() {});
 }

@@ -8,6 +8,7 @@ require_once __DIR__ . '/../core/db.php';
 require_once __DIR__ . '/../core/security.php';
 require_once __DIR__ . '/../core/matcher.php';
 require_once __DIR__ . '/../core/layout.php';
+require_once __DIR__ . '/../core/cards.php';
 
 setSecurityHeaders();
 if (session_status() === PHP_SESSION_NONE) {
@@ -28,6 +29,7 @@ $error = null;
 $radarMatch = null;
 $generatedTag = null;
 $ownerCode = null;
+$matches = [];
 
 $areas = gazaAreas();
 
@@ -127,10 +129,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $type !== 'choose') {
         switch ($type) {
             case 'lost':
             case 'found':
-                $category = sanitize($_POST['category'] ?? 'other');
-                if (!isset($categories[$category])) $category = 'other';
+                $category = sanitize($_POST['category'] ?? '');
+                if (!isset($categories[$category])) $category = '';
+                $attrs = $category ? readAttributes($category, $_POST['attr'] ?? []) : [];
                 $ident = trim($_POST['identifier'] ?? '');
                 $title = sanitize($_POST['title'] ?? '');
+                if ($title === '' && $attrs) {
+                    $title = buildTitle($categories[$category], $attrs, $category);
+                }
                 $description = mb_substr(sanitize($_POST['description'] ?? ''), 0, 300);
                 $area = sanitize($_POST['location'] ?? '');
                 $landmark = mb_substr(sanitize($_POST['landmark'] ?? ''), 0, 80);
@@ -153,8 +159,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $type !== 'choose') {
                     }
                 }
 
-                if (empty($title) || empty($area) || empty($phone)) {
-                    $error = 'يرجى كتابة ما فقدته أو وجدته، واختيار المنطقة، وكتابة رقم جوالك.';
+                if ($category === '') {
+                    $error = 'اختر نوع الغرض أولاً.';
+                } elseif (empty($title) || empty($area) || empty($phone)) {
+                    $error = 'يرجى ملء مواصفة واحدة على الأقل (أو عنوان قصير)، واختيار المنطقة، وكتابة رقم جوالك.';
                 } elseif (!isValidPhone($phone) || ($altPhone !== '' && !isValidPhone($altPhone))) {
                     $error = 'رقم الجوال غير صحيح. اكتبه بالأرقام فقط، مثل 0599123456.';
                 } elseif ($type === 'found' && (trim($_POST['secret_question'] ?? '') !== '') !== (trim($_POST['secret_answer'] ?? '') !== '')) {
@@ -162,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $type !== 'choose') {
                 } else {
                     $cleanedIdent = preg_replace('/[\s\-\.]/', '', $ident);
                     $identHash = !empty($cleanedIdent) ? hashIdentifier($cleanedIdent) : null;
-                    $normName = normalizeArabic($title . ' ' . $description);
+                    $normName = normalizeArabic($title . ' ' . $description . ' ' . attributesText($category, $attrs));
                     $location = buildLocation($area, $landmark);
                     $ownerCode = generateOwnerCode();
 
@@ -171,12 +179,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $type !== 'choose') {
                             type, category, identifier_hash, title_or_name, normalized_name,
                             location, location_area, drop_point, secret_question, secret_answer_hash,
                             contact_info, contact_alt, status, ip_address,
-                            description, event_date, owner_code_hash
+                            description, event_date, owner_code_hash, attributes
                         ) VALUES (
                             :type, :cat, :hash, :title, :norm,
                             :loc, :area, :drop, :sq, :sa,
                             :phone, :alt, 'active', :ip,
-                            :desc, :edate, :owner
+                            :desc, :edate, :owner, :attrs
                         )
                     ");
                     $stmt->bindValue(':type', $type);
@@ -195,10 +203,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $type !== 'choose') {
                     $stmt->bindValue(':desc', $description ?: null);
                     $stmt->bindValue(':edate', $eventDate);
                     $stmt->bindValue(':owner', hashOwnerCode($ownerCode));
+                    $stmt->bindValue(':attrs', $attrs ? json_encode($attrs, JSON_UNESCAPED_UNICODE) : null);
                     $stmt->execute();
                     $newItemId = (int)$db->lastInsertId();
 
                     logAction("report_{$type}", "Item ID: {$newItemId} - {$title}");
+
+                    // Reports on the other side that may be the same item
+                    $other = $type === 'lost' ? 'found' : 'lost';
+                    if ($identHash) {
+                        foreach (searchByIdentifier($identHash) as $hit) {
+                            if ($hit['type'] === $other && (int)$hit['id'] !== $newItemId) {
+                                $hit['match_score'] = 100;
+                                $hit['matched_labels'] = ['رقم الوثيقة'];
+                                $matches[$hit['id']] = $hit;
+                            }
+                        }
+                    }
+                    foreach (matchItems($category, $attrs, $other, $area, $eventDate, 6, $newItemId) as $hit) {
+                        $matches[$hit['id']] = $matches[$hit['id']] ?? $hit;
+                    }
+                    $matches = array_slice(array_values($matches), 0, 6);
 
                     // Someone is already waiting for this document number
                     if ($type === 'found' && $identHash) {
@@ -570,6 +595,20 @@ pageStart($pageTitles[$type] ?? 'سجّل بلاغاً', 'report');
             </div>
         </div>
 
+        <?php if ($matches): ?>
+            <section class="narrow match-section" aria-labelledby="matchTitle">
+                <h2 class="section-title" id="matchTitle"><?= icon('search') ?><span><?= $type === 'lost' ? 'قد تكون إحدى هذه أمانتك' : 'قد يكون صاحب الغرض سجّل أحد هذه البلاغات' ?></span></h2>
+                <p class="section-sub" style="margin-bottom: 1rem;">بلاغات قريبة من المواصفات التي أدخلتها، مرتبة من الأقرب.</p>
+                <div class="items-grid match-grid">
+                    <?php foreach ($matches as $m): ?>
+                        <?php renderItemCard($m); ?>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php elseif ($result && in_array($type, ['lost', 'found'], true)): ?>
+            <p class="narrow band-note">لا توجد بلاغات مطابقة حتى الآن. سيظهر بلاغك لكل من يبحث بمواصفات قريبة.</p>
+        <?php endif; ?>
+
     <?php else: ?>
 
     <div class="form-card">
@@ -580,25 +619,36 @@ pageStart($pageTitles[$type] ?? 'سجّل بلاغاً', 'report');
         <p class="form-intro"><?= htmlspecialchars($pageIntros[$type] ?? '') ?></p>
         <p class="form-required-note">الحقول المعلَّمة بـ <span class="req">*</span> مطلوبة.</p>
 
-        <form method="POST" action="report.php?type=<?= htmlspecialchars($type) ?>">
+        <form method="POST" action="report.php?type=<?= htmlspecialchars($type) ?>" class="attr-form">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
 
             <?php if ($type === 'lost' || $type === 'found'): ?>
                 <?php $isFound = $type === 'found'; ?>
-                <div class="form-group">
-                    <label class="form-label" for="f-title"><?= $isFound ? 'ما الذي وجدته؟' : 'ما الذي فقدته؟' ?> <span class="req">*</span></label>
-                    <input type="text" name="title" id="f-title" class="form-control" value="<?= old('title') ?>" required
-                        placeholder="<?= $isFound ? 'مثال: هوية باسم أحمد محمد النجار، أو محفظة جلد' : 'مثال: هوية باسم أحمد محمد النجار، أو هاتف سامسونج أزرق' ?>">
-                    <div class="form-text"><?= icon('info') ?><span>للوثائق اكتب الاسم الكامل المكتوب عليها، فهكذا يبحث الناس.</span></div>
+                <?php $selCat = (string)($_POST['category'] ?? ($_GET['category'] ?? '')); ?>
+                <fieldset class="form-group">
+                    <legend class="form-label"><?= $isFound ? 'ما نوع الغرض الذي وجدته؟' : 'ما نوع الغرض الذي فقدته؟' ?> <span class="req">*</span></legend>
+                    <div class="type-tiles">
+                        <?php foreach (itemCategories() as $k => $c): ?>
+                            <label class="type-tile">
+                                <input type="radio" name="category" value="<?= $k ?>" <?= $selCat === $k ? 'checked' : '' ?> required>
+                                <span><?= icon($c['icon']) ?><?= htmlspecialchars($c['name']) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </fieldset>
+
+                <div class="attr-area">
+                    <h2 class="panel-title"><?= icon('list') ?> المواصفات</h2>
+                    <p class="attr-empty-note">اختر نوع الغرض لتظهر حقول مواصفاته.</p>
+                    <?php renderAttributeFields($selCat, is_array($_POST['attr'] ?? null) ? $_POST['attr'] : []); ?>
+                    <p class="form-text"><?= icon('info') ?><span>كل مواصفة تملؤها تساعد على مطابقة بلاغك مع البلاغات الأخرى. املأ ما تعرفه فقط.</span></p>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="f-category">النوع <span class="req">*</span></label>
-                    <select name="category" id="f-category" class="form-control" required>
-                        <?php foreach ($categories as $k => $v): ?>
-                            <option value="<?= htmlspecialchars($k) ?>" <?= ($_POST['category'] ?? '') === $k ? 'selected' : '' ?>><?= htmlspecialchars($v) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label class="form-label" for="f-title">عنوان قصير (اختياري)</label>
+                    <input type="text" name="title" id="f-title" class="form-control" value="<?= old('title') ?>" maxlength="100"
+                        placeholder="<?= $isFound ? 'مثال: هوية باسم أحمد محمد النجار' : 'مثال: هاتف سامسونج أزرق بجراب شفاف' ?>">
+                    <div class="form-text"><?= icon('info') ?><span>إن تركته فارغاً نكتبه من المواصفات.</span></div>
                 </div>
 
                 <div class="form-group">

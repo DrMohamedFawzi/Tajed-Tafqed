@@ -185,6 +185,7 @@ SQL;
  * - owner_code_hash: bcrypt hash of the private code that lets the reporter close the report
  * - description: optional details (colour, marks)
  * - event_date: date the item was lost / found (as entered by the reporter)
+ * - attributes: JSON of the category's specification fields (core/attributes.php)
  *
  * @param PDO $db
  */
@@ -199,6 +200,7 @@ function migrateSchema(PDO $db): void
         'owner_code_hash' => 'TEXT',
         'description' => 'TEXT',
         'event_date' => 'TEXT',
+        'attributes' => 'TEXT',
     ];
 
     foreach ($columns as $name => $type) {
